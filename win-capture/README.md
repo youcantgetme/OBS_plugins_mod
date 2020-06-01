@@ -1,6 +1,6 @@
 Window Capture via Screen capture method 
 ==========================================
-> for OBS Stuido 25.0.8
+** for OBS Stuido 25.0.8 **
 ![image](https://github.com/youcantgetme/OBS_plugins_mod/blob/master/win-capture/ui.png)
 
 This modified plugins allows OBS capture GPU/hardware accelerated window.
