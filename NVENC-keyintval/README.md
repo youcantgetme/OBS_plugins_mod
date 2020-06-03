@@ -4,7 +4,7 @@ NVENC keyframe interval modification for OBS
 
 ![image](https://github.com/youcantgetme/OBS_plugins_mod/blob/master/NVENC-keyintval/desc.png)
 
-*** No more proxy files for 4K editing ***
+***No more proxy files for 4K editing***
 
 The default keyframe interval/keyframe intval/GOP (group of frames) value of OBS's NVENC encoder are either `250` at 0=auto or `frame rate`(30/60) at 1 second.
 
