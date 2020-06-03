@@ -13,7 +13,7 @@ This leaves huge decode loading while editing, especially at 2K above resolution
 OBS provide intval by seconds unit option only, x264 encoder can use x264 option to modify it with frames unit, so code modification or binary patch is inevitable on NVENC.
  
  
-# Binart editing
+# Binary editing
 - Open obs-ffmpeg.dll with HEX capable editor (administrator required while in Program Files folder)
 
 - find `41 BD FA`
