@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <util/dstr.h>
+#include <dwmapi.h>
 #include "dc-capture.h"
 #include "window-helpers.h"
 #include "../../libobs/util/platform.h"
@@ -13,7 +14,7 @@
 #define TEXT_METHOD_AUTO    obs_module_text("WindowCapture.Method.Auto")
 #define TEXT_METHOD_BITBLT  obs_module_text("WindowCapture.Method.BitBlt")
 #define TEXT_METHOD_WGC     obs_module_text("WindowCapture.Method.WindowsGraphicsCapture")
-#define TEXT_METHOD_SCREEN  obs_module_text("Capture via screen capture method. Caution! other window could on it")
+#define TEXT_METHOD_SCREEN  obs_module_text("Screen capture (Caution! other window could cover it)")
 #define TEXT_MATCH_PRIORITY obs_module_text("WindowCapture.Priority")
 #define TEXT_MATCH_TITLE    obs_module_text("WindowCapture.Priority.Title")
 #define TEXT_MATCH_CLASS    obs_module_text("WindowCapture.Priority.Class")
@@ -22,7 +23,6 @@
 #define TEXT_CAPTURE_CURSOR obs_module_text("CaptureCursor")
 #define TEXT_COMPATIBILITY  obs_module_text("Compatibility")
 #define TEXT_CLIENT_AREA    obs_module_text("ClientArea")
-#define TEXT_CROP_SHADOW   obs_module_text("Enable shadow crop")
 
 
 /* clang-format on */
@@ -63,7 +63,6 @@ struct window_capture {
 	bool compatibility;
 	bool client_area;
 	bool use_wildcards; /* TODO */
-	bool crop_shadow;
 
 	struct dc_capture capture;
 
@@ -157,7 +156,6 @@ static void update_settings(struct window_capture *wc, obs_data_t *s)
 	wc->use_wildcards = obs_data_get_bool(s, "use_wildcards");
 	wc->compatibility = obs_data_get_bool(s, "compatibility");
 	wc->client_area = obs_data_get_bool(s, "client_area");
-	wc->crop_shadow = obs_data_get_bool(s, "crop_shadow");
 }
 
 /* ------------------------------------------------------------------------- */
@@ -284,7 +282,6 @@ static void wc_defaults(obs_data_t *defaults)
 	obs_data_set_default_bool(defaults, "cursor", true);
 	obs_data_set_default_bool(defaults, "compatibility", false);
 	obs_data_set_default_bool(defaults, "client_area", true);
-	obs_data_set_default_bool(defaults, "crop_shadow", true);
 }
 
 static void update_settings_visibility(obs_properties_t *props,
@@ -307,9 +304,6 @@ static void update_settings_visibility(obs_properties_t *props,
 
 	p = obs_properties_get(props, "client_area");
 	obs_property_set_visible(p, wgc_options);
-
-	p = obs_properties_get(props, "crop_shadow");
-	obs_property_set_visible(p, screen_options);
 }
 
 static bool wc_capture_method_changed(obs_properties_t *props,
@@ -373,8 +367,6 @@ static obs_properties_t *wc_properties(void *data)
 	obs_properties_add_bool(ppts, "cursor", TEXT_CAPTURE_CURSOR);
 
 	obs_properties_add_bool(ppts, "compatibility", TEXT_COMPATIBILITY);
-
-	obs_properties_add_bool(ppts, "crop_shadow", TEXT_CROP_SHADOW);
 
 	obs_properties_add_bool(ppts, "client_area", TEXT_CLIENT_AREA);
 
@@ -474,13 +466,13 @@ static void wc_tick(void *data, float seconds)
 		if (wc->method == METHOD_BITBLT)
 			GetClientRect(wc->window, &rect);
 		else {
-			GetWindowRect(wc->window, &rect);
-			if (wc->crop_shadow) {
-				rect.left += 7;
-				rect.bottom -= 7;
-				rect.right -= 7;
-			}
-			
+			DwmGetWindowAttribute(wc->window,
+					      DWMWA_EXTENDED_FRAME_BOUNDS,
+					      &rect, sizeof(rect));
+				rect.top += 1;
+				rect.left += 1;
+				rect.bottom -= 1;
+				rect.right -= 1;
 		}
 			
 
