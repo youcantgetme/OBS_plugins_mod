@@ -23,6 +23,8 @@
 #define TEXT_CAPTURE_CURSOR obs_module_text("CaptureCursor")
 #define TEXT_COMPATIBILITY  obs_module_text("Compatibility")
 #define TEXT_CLIENT_AREA    obs_module_text("ClientArea")
+#define TEXT_CROP           obs_module_text("Border crop")
+#define TEXT_SCALE           obs_module_text("Display scale")
 
 
 /* clang-format on */
@@ -62,7 +64,9 @@ struct window_capture {
 	bool cursor;
 	bool compatibility;
 	bool client_area;
+	bool border_crop;
 	bool use_wildcards; /* TODO */
+	int scale_dpi;
 
 	struct dc_capture capture;
 
@@ -155,7 +159,9 @@ static void update_settings(struct window_capture *wc, obs_data_t *s)
 	wc->cursor = obs_data_get_bool(s, "cursor");
 	wc->use_wildcards = obs_data_get_bool(s, "use_wildcards");
 	wc->compatibility = obs_data_get_bool(s, "compatibility");
+	wc->border_crop = obs_data_get_bool(s, "border_crop");
 	wc->client_area = obs_data_get_bool(s, "client_area");
+	wc->scale_dpi = (int)obs_data_get_int(s, "scale_dpi");
 }
 
 /* ------------------------------------------------------------------------- */
@@ -279,9 +285,11 @@ static uint32_t wc_height(void *data)
 static void wc_defaults(obs_data_t *defaults)
 {
 	obs_data_set_default_int(defaults, "method", METHOD_AUTO);
+	obs_data_set_default_int(defaults, "scale_dpi", 100);
 	obs_data_set_default_bool(defaults, "cursor", true);
 	obs_data_set_default_bool(defaults, "compatibility", false);
 	obs_data_set_default_bool(defaults, "client_area", true);
+	obs_data_set_default_bool(defaults, "border_crop", false);
 }
 
 static void update_settings_visibility(obs_properties_t *props,
@@ -301,9 +309,15 @@ static void update_settings_visibility(obs_properties_t *props,
 
 	p = obs_properties_get(props, "compatibility");
 	obs_property_set_visible(p, bitblt_options);
-
+	
 	p = obs_properties_get(props, "client_area");
 	obs_property_set_visible(p, wgc_options);
+
+	p = obs_properties_get(props, "scale_dpi");
+	obs_property_set_visible(p, bitblt_options);
+
+	p = obs_properties_get(props, "border_crop");
+	obs_property_set_visible(p, screen_options);
 }
 
 static bool wc_capture_method_changed(obs_properties_t *props,
@@ -367,6 +381,12 @@ static obs_properties_t *wc_properties(void *data)
 	obs_properties_add_bool(ppts, "cursor", TEXT_CAPTURE_CURSOR);
 
 	obs_properties_add_bool(ppts, "compatibility", TEXT_COMPATIBILITY);
+
+	obs_properties_add_bool(ppts, "border_crop", TEXT_CROP);
+
+	p = obs_properties_add_int_slider(ppts, "scale_dpi", TEXT_SCALE, 100, 400,
+					  1);
+	obs_property_int_set_suffix(p, "%");
 
 	obs_properties_add_bool(ppts, "client_area", TEXT_CLIENT_AREA);
 
@@ -469,13 +489,26 @@ static void wc_tick(void *data, float seconds)
 			DwmGetWindowAttribute(wc->window,
 					      DWMWA_EXTENDED_FRAME_BOUNDS,
 					      &rect, sizeof(rect));
-				rect.top += 1;
-				rect.left += 1;
-				rect.bottom -= 1;
-				rect.right -= 1;
+			rect.top += 1;
+			rect.left += 1;
+			rect.bottom -= 1;
+			rect.right -= 1;
+			if (wc->border_crop) {
+				rect.top += 0;
+				rect.left += 7;
+				rect.bottom -= 7;
+				rect.right -= 7;
+			}
 		}
 			
-
+		if (wc->scale_dpi != 100 && wc->method == METHOD_BITBLT)
+		{
+			rect.top = rect.top * 100 / wc->scale_dpi;
+			rect.left = rect.left * 100 / wc->scale_dpi;
+			rect.bottom = rect.bottom * 100 / wc->scale_dpi;
+			rect.right = rect.right * 100 / wc->scale_dpi;
+		}
+		
 		if (!reset_capture) {
 			wc->resize_timer += seconds;
 
